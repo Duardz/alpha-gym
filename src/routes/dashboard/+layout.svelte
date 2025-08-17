@@ -165,18 +165,4 @@
       </main>
     </div>
   </div>
-{:else}
-  <!-- Fallback if somehow user is not authenticated -->
-  <div class="min-h-screen flex items-center justify-center bg-gray-50">
-    <div class="text-center">
-      <h2 class="text-xl font-semibold text-gray-900 mb-4">Access Denied</h2>
-      <p class="text-gray-600 mb-4">You need to be authenticated to access this page.</p>
-      <a 
-        href="/" 
-        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-      >
-        Go to Login
-      </a>
-    </div>
-  </div>
 {/if}
