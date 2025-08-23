@@ -172,40 +172,5 @@
         </div>
       </div>
     </div>
-
-    <!-- Quick Actions -->
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <a 
-          href="/members" 
-          class="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200"
-        >
-          <span class="text-2xl mb-2">👥</span>
-          <span class="text-sm font-medium text-blue-800">Add New Member</span>
-        </a>
-        <a 
-          href="/walk-ins" 
-          class="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors duration-200"
-        >
-          <span class="text-2xl mb-2">🚶</span>
-          <span class="text-sm font-medium text-purple-800">Record Walk-in</span>
-        </a>
-        <a 
-          href="/inventory" 
-          class="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors duration-200"
-        >
-          <span class="text-2xl mb-2">📦</span>
-          <span class="text-sm font-medium text-green-800">Update Inventory</span>
-        </a>
-        <a 
-          href="/expenses" 
-          class="flex flex-col items-center p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors duration-200"
-        >
-          <span class="text-2xl mb-2">💸</span>
-          <span class="text-sm font-medium text-red-800">Add Expense</span>
-        </a>
-      </div>
-    </div>
   {/if}
 </div>

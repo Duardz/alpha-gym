@@ -1,9 +1,10 @@
+// src/lib/firebase.ts
 import { initializeApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 import { browser } from '$app/environment';
 
-// Use import.meta.env for Vite environment variables
+// Firebase configuration from environment variables
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -15,19 +16,19 @@ const firebaseConfig = {
 
 // Validate required environment variables
 if (!import.meta.env.VITE_FIREBASE_API_KEY || !import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-  console.error('Missing required Firebase environment variables. Please check your .env file.');
-  console.error('Required variables: VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID');
+  console.error('🔥 Missing required Firebase environment variables!');
+  console.error('Required: VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID');
+  console.error('Check your .env file and restart the dev server.');
 }
 
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Auth and Firestore only in browser
-export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
+// Initialize services
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
-// Auth state management
-export const authState = {
-  user: null as any,
-  loading: true
-};
+// Log Firebase initialization (only in development)
+if (browser && import.meta.env.DEV) {
+  console.log('🔥 Firebase initialized with project:', firebaseConfig.projectId);
+}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { db } from '$lib/firebase';
-  import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, Timestamp } from 'firebase/firestore';
+  import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, Timestamp } from 'firebase/firestore';
   import type { WalkIn, PaymentMethod } from '$lib/types';
 
   // State
@@ -15,10 +15,9 @@
 
   // Form data
   let formData = {
-    name: 'Guest',
+    name: '',
     payment: 100,
-    method: 'Cash' as PaymentMethod,
-    date: ''
+    method: 'Cash' as PaymentMethod
   };
 
   // Form validation
@@ -32,8 +31,6 @@
 
   onMount(() => {
     loadWalkIns();
-    // Set default date to today
-    formData.date = new Date().toISOString().split('T')[0];
   });
 
   // Load walk-ins from Firestore
@@ -72,10 +69,6 @@
       errors.payment = 'Payment amount must be greater than 0';
     }
 
-    if (!formData.date) {
-      errors.date = 'Date is required';
-    }
-
     return Object.keys(errors).length === 0;
   }
 
@@ -85,10 +78,10 @@
 
     try {
       const walkInData = {
-        name: formData.name.trim(),
+        name: formData.name.trim() || 'Guest',
         payment: formData.payment,
         method: formData.method,
-        date: Timestamp.fromDate(new Date(formData.date + 'T' + new Date().toTimeString().split(' ')[0])),
+        date: Timestamp.fromDate(new Date()),
         createdAt: serverTimestamp()
       };
 
@@ -99,9 +92,8 @@
         type: 'income',
         source: 'Day Pass',
         amount: formData.payment,
-        date: formData.date,
-        notes: `Day pass - ${formData.name}`,
-        linkedId: null // Will be updated with walk-in ID if needed
+        date: new Date().toISOString().split('T')[0],
+        notes: `Day pass - ${formData.name || 'Guest'}`
       });
       
       // Reset form and reload
@@ -136,8 +128,7 @@
     formData = {
       name: walkIn.name,
       payment: walkIn.payment,
-      method: walkIn.method,
-      date: walkIn.date.toISOString().split('T')[0]
+      method: walkIn.method
     };
     showAddForm = true;
   }
@@ -148,10 +139,9 @@
 
     try {
       const walkInData = {
-        name: formData.name.trim(),
+        name: formData.name.trim() || 'Guest',
         payment: formData.payment,
-        method: formData.method,
-        date: Timestamp.fromDate(new Date(formData.date + 'T' + new Date().toTimeString().split(' ')[0]))
+        method: formData.method
       };
 
       await updateDoc(doc(db, 'walkIns', editingWalkIn.id), walkInData);
@@ -188,10 +178,9 @@
   // Reset form
   function resetForm() {
     formData = {
-      name: 'Guest',
+      name: '',
       payment: 100,
-      method: 'Cash',
-      date: new Date().toISOString().split('T')[0]
+      method: 'Cash'
     };
     errors = {};
     editingWalkIn = null;
@@ -205,7 +194,11 @@
 
   // Quick add with preset amount
   function quickAdd(amount: number) {
-    formData.payment = amount;
+    formData = {
+      name: '',
+      payment: amount,
+      method: 'Cash'
+    };
     showAddForm = true;
   }
 
@@ -277,33 +270,15 @@
 </svelte:head>
 
 <div class="p-6">
-  <!-- Page Header -->
-  <div class="mb-8">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900">Walk-ins Management</h1>
-        <p class="text-gray-600 mt-1">Manage day passes and casual gym visitors</p>
-      </div>
-      <button
-        on:click={() => { resetForm(); showAddForm = true; }}
-        class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200 font-medium"
-      >
-        + Record Walk-in
-      </button>
-    </div>
-  </div>
-
   <!-- Quick Stats Cards -->
   <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
     <!-- Today's Walk-ins -->
     <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-            <span class="text-purple-600 text-lg">🚶</span>
-          </div>
+        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+          <span class="text-purple-600 text-xl">🚶</span>
         </div>
-        <div class="ml-4 flex-1">
+        <div class="ml-4">
           <p class="text-sm font-medium text-gray-600">Today's Walk-ins</p>
           <p class="text-2xl font-bold text-gray-900">{stats.today}</p>
         </div>
@@ -313,14 +288,12 @@
     <!-- Today's Revenue -->
     <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-            <span class="text-green-600 text-lg">💰</span>
-          </div>
+        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+          <span class="text-green-600 text-xl">💰</span>
         </div>
-        <div class="ml-4 flex-1">
+        <div class="ml-4">
           <p class="text-sm font-medium text-gray-600">Today's Revenue</p>
-          <p class="text-2xl font-bold text-gray-900">{formatCurrency(stats.todayRevenue)}</p>
+          <p class="text-2xl font-bold text-green-600">{formatCurrency(stats.todayRevenue)}</p>
         </div>
       </div>
     </div>
@@ -328,12 +301,10 @@
     <!-- Total Walk-ins -->
     <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <span class="text-blue-600 text-lg">📊</span>
-          </div>
+        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+          <span class="text-blue-600 text-xl">📊</span>
         </div>
-        <div class="ml-4 flex-1">
+        <div class="ml-4">
           <p class="text-sm font-medium text-gray-600">Total Walk-ins</p>
           <p class="text-2xl font-bold text-gray-900">{stats.total}</p>
         </div>
@@ -343,12 +314,10 @@
     <!-- Average Payment -->
     <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            <span class="text-yellow-600 text-lg">💵</span>
-          </div>
+        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+          <span class="text-yellow-600 text-xl">💵</span>
         </div>
-        <div class="ml-4 flex-1">
+        <div class="ml-4">
           <p class="text-sm font-medium text-gray-600">Avg. Payment</p>
           <p class="text-2xl font-bold text-gray-900">{formatCurrency(stats.averagePayment)}</p>
         </div>
@@ -357,70 +326,92 @@
   </div>
 
   <!-- Quick Actions -->
-  <div class="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-    <h3 class="text-sm font-medium text-gray-700 mb-3">Quick Day Pass Registration</h3>
-    <div class="flex gap-2 flex-wrap">
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">Quick Day Pass Registration</h3>
+        <p class="text-sm text-gray-600">Fast registration with common pricing</p>
+      </div>
+      <button
+        on:click={() => { resetForm(); showAddForm = true; }}
+        class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200 font-medium inline-flex items-center"
+      >
+        <span class="mr-2">+</span> Record Walk-in
+      </button>
+    </div>
+    
+    <div class="flex gap-3 flex-wrap">
       {#each quickAmounts as amount}
         <button
           on:click={() => quickAdd(amount)}
-          class="px-4 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors duration-200 text-sm font-medium"
+          class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors duration-200 text-sm font-medium"
         >
-          {formatCurrency(amount)}
+          {formatCurrency(amount)} Day Pass
         </button>
       {/each}
     </div>
   </div>
 
   <!-- Search and Filter -->
-  <div class="mb-6 flex flex-col sm:flex-row gap-4">
-    <div class="flex-1">
-      <input
-        type="text"
-        placeholder="Search by name..."
-        bind:value={searchTerm}
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-      />
-    </div>
-    <div>
-      <input
-        type="date"
-        bind:value={dateFilter}
-        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-      />
-    </div>
-    <div>
-      <select
-        bind:value={paymentMethodFilter}
-        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-      >
-        <option value="All">All Methods</option>
-        {#each paymentMethods as method}
-          <option value={method}>{method}</option>
-        {/each}
-      </select>
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="flex-1">
+        <input
+          type="text"
+          placeholder="Search by name..."
+          bind:value={searchTerm}
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+        />
+      </div>
+      <div class="flex gap-3">
+        <input
+          type="date"
+          bind:value={dateFilter}
+          class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+        />
+        <select
+          bind:value={paymentMethodFilter}
+          class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+        >
+          <option value="All">All Methods</option>
+          {#each paymentMethods as method}
+            <option value={method}>{method}</option>
+          {/each}
+        </select>
+      </div>
     </div>
   </div>
 
   <!-- Add/Edit Form Modal -->
   {#if showAddForm}
-    <div class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
         <div class="p-6">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4">
-            {editingWalkIn ? 'Edit Walk-in' : 'Record New Walk-in'}
-          </h2>
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-gray-900">
+              {editingWalkIn ? 'Edit Walk-in' : 'Record New Walk-in'}
+            </h2>
+            <button
+              on:click={cancelForm}
+              class="text-gray-400 hover:text-gray-600 p-1"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
 
           <form on:submit|preventDefault={editingWalkIn ? updateWalkIn : addWalkIn} class="space-y-4">
             <!-- Name -->
             <div>
-              <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
                 Visitor Name
               </label>
               <input
                 id="name"
                 type="text"
                 bind:value={formData.name}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 {errors.name ? 'border-red-500' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 {errors.name ? 'border-red-500' : ''}"
                 placeholder="Guest name (optional)"
               />
               {#if errors.name}
@@ -430,7 +421,7 @@
 
             <!-- Payment Amount -->
             <div>
-              <label for="payment" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="payment" class="block text-sm font-medium text-gray-700 mb-2">
                 Payment Amount *
               </label>
               <input
@@ -439,7 +430,7 @@
                 min="1"
                 step="0.01"
                 bind:value={formData.payment}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 {errors.payment ? 'border-red-500' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 {errors.payment ? 'border-red-500' : ''}"
                 placeholder="100"
               />
               {#if errors.payment}
@@ -449,13 +440,13 @@
 
             <!-- Payment Method -->
             <div>
-              <label for="method" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="method" class="block text-sm font-medium text-gray-700 mb-2">
                 Payment Method *
               </label>
               <select
                 id="method"
                 bind:value={formData.method}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 {#each paymentMethods as method}
                   <option value={method}>{method}</option>
@@ -463,34 +454,18 @@
               </select>
             </div>
 
-            <!-- Date -->
-            <div>
-              <label for="date" class="block text-sm font-medium text-gray-700 mb-1">
-                Date *
-              </label>
-              <input
-                id="date"
-                type="date"
-                bind:value={formData.date}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 {errors.date ? 'border-red-500' : ''}"
-              />
-              {#if errors.date}
-                <p class="text-red-600 text-sm mt-1">{errors.date}</p>
-              {/if}
-            </div>
-
             <!-- Form Actions -->
-            <div class="flex gap-3 pt-4">
+            <div class="flex gap-3 pt-6">
               <button
                 type="submit"
-                class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors duration-200"
+                class="flex-1 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors duration-200 font-medium"
               >
                 {editingWalkIn ? 'Update Walk-in' : 'Record Walk-in'}
               </button>
               <button
                 type="button"
                 on:click={cancelForm}
-                class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
+                class="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200 font-medium"
               >
                 Cancel
               </button>
@@ -503,15 +478,33 @@
 
   <!-- Walk-ins List -->
   {#if isLoading}
-    <div class="text-center py-8">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-      <p class="mt-2 text-gray-600">Loading walk-ins...</p>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+      <div class="text-center">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <p class="mt-4 text-gray-600">Loading walk-ins...</p>
+      </div>
     </div>
   {:else if filteredWalkIns.length === 0}
-    <div class="text-center py-8">
-      <p class="text-gray-500">
-        {walkIns.length === 0 ? 'No walk-ins recorded yet. Record your first day pass!' : 'No walk-ins match your search criteria.'}
-      </p>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span class="text-gray-400 text-2xl">🚶</span>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          {walkIns.length === 0 ? 'No walk-ins recorded yet' : 'No walk-ins found'}
+        </h3>
+        <p class="text-gray-500 mb-6">
+          {walkIns.length === 0 ? 'Record your first day pass!' : 'Try adjusting your search or filter criteria.'}
+        </p>
+        {#if walkIns.length === 0}
+          <button
+            on:click={() => { resetForm(); showAddForm = true; }}
+            class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200"
+          >
+            Record First Walk-in
+          </button>
+        {/if}
+      </div>
     </div>
   {:else}
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -528,35 +521,47 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             {#each filteredWalkIns as walkIn}
-              <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">{walkIn.name}</div>
+              <tr class="hover:bg-gray-50 transition-colors duration-150">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span class="text-purple-600 font-semibold text-sm">
+                        {walkIn.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div class="ml-4">
+                      <div class="text-sm font-medium text-gray-900">{walkIn.name}</div>
+                      <div class="text-sm text-gray-500">Day Pass</div>
+                    </div>
+                  </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="px-6 py-4">
                   <div class="text-sm text-gray-900">{formatDate(walkIn.date)}</div>
                   <div class="text-sm text-gray-500">{formatTime(walkIn.date)}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="px-6 py-4">
                   <div class="text-sm font-medium text-gray-900">{formatCurrency(walkIn.payment)}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {getPaymentMethodColor(walkIn.method)}">
+                <td class="px-6 py-4">
+                  <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full {getPaymentMethodColor(walkIn.method)}">
                     {walkIn.method}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                  <button
-                    on:click={() => editWalkIn(walkIn)}
-                    class="text-purple-600 hover:text-purple-900"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    on:click={() => deleteWalkIn(walkIn)}
-                    class="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
+                <td class="px-6 py-4 text-sm font-medium">
+                  <div class="flex space-x-3">
+                    <button
+                      on:click={() => editWalkIn(walkIn)}
+                      class="text-purple-600 hover:text-purple-900 transition-colors duration-150"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      on:click={() => deleteWalkIn(walkIn)}
+                      class="text-red-600 hover:text-red-900 transition-colors duration-150"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             {/each}

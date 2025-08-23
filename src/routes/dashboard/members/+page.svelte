@@ -11,6 +11,7 @@
   let editingMember: Member | null = null;
   let searchTerm = '';
   let statusFilter: MemberStatus | 'All' = 'All';
+  let membershipFilter: MembershipType | 'All' = 'All';
 
   // Form data
   let formData = {
@@ -236,13 +237,38 @@
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   }
 
-  // Filter members based on search and status
+  // Get membership type color
+  function getMembershipColor(type: MembershipType) {
+    switch (type) {
+      case 'Day Pass': return 'bg-gray-100 text-gray-800';
+      case 'Warrior Pass': return 'bg-orange-100 text-orange-800';
+      case 'Gladiator Pass': return 'bg-purple-100 text-purple-800';
+      case 'Alpha Elite Pass': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  // Filter members based on search and filters
   $: filteredMembers = members.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.contact.includes(searchTerm);
     const matchesStatus = statusFilter === 'All' || member.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesMembership = membershipFilter === 'All' || member.membershipType === membershipFilter;
+    return matchesSearch && matchesStatus && matchesMembership;
   });
+
+  // Get statistics
+  $: stats = {
+    total: members.length,
+    active: members.filter(m => m.status === 'Active').length,
+    expired: members.filter(m => m.status === 'Expired').length,
+    byType: {
+      'Day Pass': members.filter(m => m.membershipType === 'Day Pass').length,
+      'Warrior Pass': members.filter(m => m.membershipType === 'Warrior Pass').length,
+      'Gladiator Pass': members.filter(m => m.membershipType === 'Gladiator Pass').length,
+      'Alpha Elite Pass': members.filter(m => m.membershipType === 'Alpha Elite Pass').length,
+    }
+  };
 </script>
 
 <svelte:head>
@@ -250,64 +276,131 @@
 </svelte:head>
 
 <div class="p-6">
-  <!-- Page Header -->
-  <div class="mb-8">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900">Members Management</h1>
-        <p class="text-gray-600 mt-1">Manage gym memberships and member information</p>
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <div class="flex items-center">
+        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+          <span class="text-blue-600 text-xl">👥</span>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-600">Total Members</p>
+          <p class="text-2xl font-bold text-gray-900">{stats.total}</p>
+        </div>
       </div>
-      <button
-        on:click={() => { resetForm(); showAddForm = true; }}
-        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
-      >
-        + Add New Member
-      </button>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <div class="flex items-center">
+        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+          <span class="text-green-600 text-xl">✅</span>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-600">Active Members</p>
+          <p class="text-2xl font-bold text-green-600">{stats.active}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <div class="flex items-center">
+        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+          <span class="text-red-600 text-xl">⏰</span>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-600">Expired Members</p>
+          <p class="text-2xl font-bold text-red-600">{stats.expired}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <div class="flex items-center">
+        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+          <span class="text-yellow-600 text-xl">🏆</span>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-600">Elite Members</p>
+          <p class="text-2xl font-bold text-yellow-600">{stats.byType['Alpha Elite Pass']}</p>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Search and Filter -->
-  <div class="mb-6 flex flex-col sm:flex-row gap-4">
-    <div class="flex-1">
-      <input
-        type="text"
-        placeholder="Search by name or contact..."
-        bind:value={searchTerm}
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-      />
-    </div>
-    <div>
-      <select
-        bind:value={statusFilter}
-        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  <!-- Actions and Filters -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+      <h2 class="text-lg font-semibold text-gray-900">Member Management</h2>
+      <button
+        on:click={() => { resetForm(); showAddForm = true; }}
+        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium inline-flex items-center"
       >
-        <option value="All">All Status</option>
-        <option value="Active">Active</option>
-        <option value="Expired">Expired</option>
-      </select>
+        <span class="mr-2">+</span> Add New Member
+      </button>
+    </div>
+
+    <!-- Search and Filter Row -->
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="flex-1">
+        <input
+          type="text"
+          placeholder="Search by name or contact..."
+          bind:value={searchTerm}
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
+      <div class="flex gap-3">
+        <select
+          bind:value={statusFilter}
+          class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="All">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Expired">Expired</option>
+        </select>
+        <select
+          bind:value={membershipFilter}
+          class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="All">All Types</option>
+          {#each membershipTypes as type}
+            <option value={type}>{type}</option>
+          {/each}
+        </select>
+      </div>
     </div>
   </div>
 
   <!-- Add/Edit Form Modal -->
   {#if showAddForm}
-    <div class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-screen overflow-y-auto">
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4">
-            {editingMember ? 'Edit Member' : 'Add New Member'}
-          </h2>
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-gray-900">
+              {editingMember ? 'Edit Member' : 'Add New Member'}
+            </h2>
+            <button
+              on:click={cancelForm}
+              class="text-gray-400 hover:text-gray-600 p-1"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
 
           <form on:submit|preventDefault={editingMember ? updateMember : addMember} class="space-y-4">
             <!-- Name -->
             <div>
-              <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
                 Full Name *
               </label>
               <input
                 id="name"
                 type="text"
                 bind:value={formData.name}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {errors.name ? 'border-red-500' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {errors.name ? 'border-red-500' : ''}"
                 placeholder="Enter full name"
               />
               {#if errors.name}
@@ -317,14 +410,14 @@
 
             <!-- Contact -->
             <div>
-              <label for="contact" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="contact" class="block text-sm font-medium text-gray-700 mb-2">
                 Contact Number *
               </label>
               <input
                 id="contact"
                 type="text"
                 bind:value={formData.contact}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {errors.contact ? 'border-red-500' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {errors.contact ? 'border-red-500' : ''}"
                 placeholder="09123456789"
               />
               {#if errors.contact}
@@ -334,13 +427,13 @@
 
             <!-- Membership Type -->
             <div>
-              <label for="membershipType" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="membershipType" class="block text-sm font-medium text-gray-700 mb-2">
                 Membership Type *
               </label>
               <select
                 id="membershipType"
                 bind:value={formData.membershipType}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 {#each membershipTypes as type}
                   <option value={type}>{type}</option>
@@ -350,14 +443,14 @@
 
             <!-- Start Date -->
             <div>
-              <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="startDate" class="block text-sm font-medium text-gray-700 mb-2">
                 Start Date *
               </label>
               <input
                 id="startDate"
                 type="date"
                 bind:value={formData.startDate}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {errors.startDate ? 'border-red-500' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {errors.startDate ? 'border-red-500' : ''}"
               />
               {#if errors.startDate}
                 <p class="text-red-600 text-sm mt-1">{errors.startDate}</p>
@@ -366,7 +459,7 @@
 
             <!-- Expiry Date -->
             <div>
-              <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-2">
                 Expiry Date *
                 {#if formData.membershipType !== 'Gladiator Pass'}
                   <span class="text-sm text-gray-500">(Auto-calculated)</span>
@@ -376,7 +469,7 @@
                 id="expiryDate"
                 type="date"
                 bind:value={formData.expiryDate}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {errors.expiryDate ? 'border-red-500' : ''}"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {errors.expiryDate ? 'border-red-500' : ''}"
                 readonly={formData.membershipType !== 'Gladiator Pass'}
               />
               {#if errors.expiryDate}
@@ -385,17 +478,17 @@
             </div>
 
             <!-- Form Actions -->
-            <div class="flex gap-3 pt-4">
+            <div class="flex gap-3 pt-6">
               <button
                 type="submit"
-                class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 font-medium"
               >
                 {editingMember ? 'Update Member' : 'Add Member'}
               </button>
               <button
                 type="button"
                 on:click={cancelForm}
-                class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
+                class="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200 font-medium"
               >
                 Cancel
               </button>
@@ -408,15 +501,33 @@
 
   <!-- Members List -->
   {#if isLoading}
-    <div class="text-center py-8">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <p class="mt-2 text-gray-600">Loading members...</p>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+      <div class="text-center">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p class="mt-4 text-gray-600">Loading members...</p>
+      </div>
     </div>
   {:else if filteredMembers.length === 0}
-    <div class="text-center py-8">
-      <p class="text-gray-500">
-        {members.length === 0 ? 'No members found. Add your first member!' : 'No members match your search criteria.'}
-      </p>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span class="text-gray-400 text-2xl">👥</span>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          {members.length === 0 ? 'No members yet' : 'No members found'}
+        </h3>
+        <p class="text-gray-500 mb-6">
+          {members.length === 0 ? 'Add your first member to get started!' : 'Try adjusting your search or filter criteria.'}
+        </p>
+        {#if members.length === 0}
+          <button
+            on:click={() => { resetForm(); showAddForm = true; }}
+            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          >
+            Add First Member
+          </button>
+        {/if}
+      </div>
     </div>
   {:else}
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -433,37 +544,51 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             {#each filteredMembers as member}
-              <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div class="text-sm font-medium text-gray-900">{member.name}</div>
-                    <div class="text-sm text-gray-500">{member.contact}</div>
+              <tr class="hover:bg-gray-50 transition-colors duration-150">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span class="text-blue-600 font-semibold text-sm">
+                        {member.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div class="ml-4">
+                      <div class="text-sm font-medium text-gray-900">{member.name}</div>
+                      <div class="text-sm text-gray-500">{member.contact}</div>
+                    </div>
                   </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm text-gray-900">{member.membershipType}</span>
+                <td class="px-6 py-4">
+                  <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full {getMembershipColor(member.membershipType)}">
+                    {member.membershipType}
+                  </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <div>{formatDate(member.startDate)} - {formatDate(member.expiryDate)}</div>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                  <div class="space-y-1">
+                    <div class="text-sm">{formatDate(member.startDate)}</div>
+                    <div class="text-xs text-gray-500">to {formatDate(member.expiryDate)}</div>
+                  </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {getStatusColor(member.status)}">
+                <td class="px-6 py-4">
+                  <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full {getStatusColor(member.status)}">
                     {member.status}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                  <button
-                    on:click={() => editMember(member)}
-                    class="text-blue-600 hover:text-blue-900"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    on:click={() => deleteMember(member)}
-                    class="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
+                <td class="px-6 py-4 text-sm font-medium">
+                  <div class="flex space-x-3">
+                    <button
+                      on:click={() => editMember(member)}
+                      class="text-blue-600 hover:text-blue-900 transition-colors duration-150"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      on:click={() => deleteMember(member)}
+                      class="text-red-600 hover:text-red-900 transition-colors duration-150"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             {/each}
@@ -472,20 +597,4 @@
       </div>
     </div>
   {/if}
-
-  <!-- Summary Stats -->
-  <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-    <div class="bg-white p-4 rounded-lg border border-gray-200 text-center">
-      <div class="text-2xl font-bold text-gray-900">{members.length}</div>
-      <div class="text-sm text-gray-500">Total Members</div>
-    </div>
-    <div class="bg-white p-4 rounded-lg border border-gray-200 text-center">
-      <div class="text-2xl font-bold text-green-600">{members.filter(m => m.status === 'Active').length}</div>
-      <div class="text-sm text-gray-500">Active Members</div>
-    </div>
-    <div class="bg-white p-4 rounded-lg border border-gray-200 text-center">
-      <div class="text-2xl font-bold text-red-600">{members.filter(m => m.status === 'Expired').length}</div>
-      <div class="text-sm text-gray-500">Expired Members</div>
-    </div>
-  </div>
 </div>
