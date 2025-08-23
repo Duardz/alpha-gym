@@ -13,7 +13,7 @@
     error: string | null;
   }
 
-  // Navigation items with corrected paths
+  // Navigation items with the new Store section
   const navItems = [
     { 
       href: '/dashboard', 
@@ -34,10 +34,16 @@
       description: 'Day Pass Records'
     },
     { 
+      href: '/dashboard/store', 
+      label: 'Store', 
+      icon: '🛒',
+      description: 'Sell Products'
+    },
+    { 
       href: '/dashboard/inventory', 
       label: 'Inventory', 
       icon: '📦',
-      description: 'Products & Supplies'
+      description: 'Stock Management'
     },
     { 
       href: '/dashboard/cashflow', 
