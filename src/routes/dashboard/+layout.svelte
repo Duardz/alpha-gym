@@ -28,6 +28,12 @@
       description: 'Membership Management'
     },
     { 
+      href: '/dashboard/renewals', 
+      label: 'Renewals', 
+      icon: '�',
+      description: 'Manage Membership Renewals'
+    },
+    { 
       href: '/dashboard/walk-ins', 
       label: 'Walk-ins', 
       icon: '🚶',
@@ -127,8 +133,8 @@
     </div>
   </div>
 {:else if $authStore.user}
-  <!-- Authenticated layout -->
-  <div class="min-h-screen bg-gray-50 flex">
+  <!-- Authenticated layout with fixed sidebar -->
+  <div class="h-screen flex overflow-hidden bg-gray-50">
     
     <!-- Mobile sidebar backdrop -->
     {#if sidebarOpen}
@@ -142,11 +148,11 @@
       ></div>
     {/if}
 
-    <!-- Sidebar -->
-    <div class="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform {sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <!-- Fixed Sidebar -->
+    <div class="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform {sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col">
       
-      <!-- Sidebar header -->
-      <div class="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800">
+      <!-- Sidebar header - Fixed -->
+      <div class="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800 flex-shrink-0">
         <div class="flex items-center space-x-3">
           <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
             <span class="text-blue-600 font-bold text-lg">🏋️</span>
@@ -167,7 +173,7 @@
         </button>
       </div>
 
-      <!-- Navigation -->
+      <!-- Navigation - Scrollable -->
       <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {#each navItems as item}
           <a
@@ -193,8 +199,8 @@
         {/each}
       </nav>
 
-      <!-- User info and logout -->
-      <div class="p-4 border-t border-gray-200 bg-gray-50">
+      <!-- User info and logout - Fixed at bottom -->
+      <div class="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
             <span class="text-blue-600 font-semibold text-sm">
@@ -219,11 +225,11 @@
       </div>
     </div>
 
-    <!-- Main content area -->
-    <div class="flex-1 lg:pl-0 flex flex-col min-w-0">
+    <!-- Main content area - Properly positioned with sidebar offset -->
+    <div class="flex-1 flex flex-col min-w-0 lg:ml-0">
       
       <!-- Top navigation bar for mobile -->
-      <div class="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+      <div class="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30 flex-shrink-0">
         <div class="px-4 py-3 flex items-center justify-between">
           <button
             on:click={toggleSidebar}
@@ -243,7 +249,7 @@
       </div>
 
       <!-- Desktop header -->
-      <div class="hidden lg:block bg-white border-b border-gray-200 px-6 py-4">
+      <div class="hidden lg:block bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-2xl font-bold text-gray-900">{pageTitle}</h1>
@@ -264,8 +270,8 @@
         </div>
       </div>
 
-      <!-- Page content -->
-      <main class="flex-1 overflow-auto">
+      <!-- Page content - Scrollable -->
+      <main class="flex-1 overflow-y-auto">
         <slot />
       </main>
     </div>
@@ -279,3 +285,55 @@
     </div>
   </div>
 {/if}
+
+<style>
+  /* Ensure proper scrolling behavior */
+  .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  .overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .overflow-y-auto::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+
+  .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Prevent body scroll when sidebar is open on mobile */
+  @media (max-width: 1024px) {
+    .sidebar-open {
+      overflow: hidden;
+    }
+  }
+
+  /* Smooth transitions */
+  .transition-transform {
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+
+  /* Focus states */
+  button:focus,
+  a:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  /* Custom active state for navigation */
+  .border-r-4 {
+    border-right-width: 4px;
+  }
+</style>
