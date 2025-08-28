@@ -80,6 +80,94 @@
     }
   }
 
+  // NEW: Export to CSV functionality
+  function exportToCSV() {
+    try {
+      // Prepare CSV headers
+      const headers = [
+        'Name',
+        'Contact',
+        'Membership Type',
+        'Start Date',
+        'Expiry Date',
+        'Status',
+        'Days Until Expiry',
+        'Created Date',
+        'Member ID'
+      ];
+
+      // Prepare CSV data
+      const csvData = filteredMembers.map(member => {
+        const daysUntilExpiry = getDaysUntilExpiry(member.expiryDate);
+        return [
+          `"${member.name.replace(/"/g, '""')}"`, // Escape quotes in names
+          member.contact,
+          member.membershipType,
+          member.startDate,
+          member.expiryDate,
+          member.status,
+          daysUntilExpiry,
+          member.createdAt.toISOString().split('T')[0], // Format as YYYY-MM-DD
+          member.id
+        ];
+      });
+
+      // Combine headers and data
+      const csvContent = [headers, ...csvData]
+        .map(row => row.join(','))
+        .join('\n');
+
+      // Create and download the file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        
+        // Generate filename with current date and filter info
+        const today = new Date().toISOString().split('T')[0];
+        const filterSuffix = statusFilter !== 'All' ? `_${statusFilter.toLowerCase()}` : '';
+        const searchSuffix = searchTerm ? `_search` : '';
+        link.setAttribute('download', `alpha_forge_members_${today}${filterSuffix}${searchSuffix}.csv`);
+        
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification(`Successfully exported ${filteredMembers.length} member records to CSV!`, 'success');
+      } else {
+        throw new Error('CSV download not supported in this browser');
+      }
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      showNotification('Failed to export CSV. Please try again.', 'error');
+    }
+  }
+
+  // NEW: Export filtered data info
+  function getExportInfo() {
+    const total = filteredMembers.length;
+    const active = filteredMembers.filter(m => m.status === 'Active').length;
+    const expired = filteredMembers.filter(m => m.status === 'Expired').length;
+    
+    let description = `${total} member${total !== 1 ? 's' : ''}`;
+    if (statusFilter !== 'All') {
+      description += ` (${statusFilter.toLowerCase()})`;
+    }
+    if (searchTerm) {
+      description += ` matching "${searchTerm}"`;
+    }
+    
+    return {
+      total,
+      active,
+      expired,
+      description
+    };
+  }
+
   // Get default price for membership type
   function getDefaultPrice(membershipType: MembershipType): number {
     const plan = membershipPlans.find(p => p.type === membershipType);
@@ -521,6 +609,9 @@
       return acc;
     }, {} as Record<MembershipType, number>)
   };
+
+  // Export info reactive statement
+  $: exportInfo = getExportInfo();
 </script>
 
 <svelte:head>
@@ -603,7 +694,7 @@
         <div>
           <p class="text-xs lg:text-sm font-medium text-gray-600">Active Members</p>
           <p class="text-xl lg:text-2xl font-bold text-green-600">{stats.active}</p>
-          <p class="text-xs text-green-500">{Math.round((stats.active / stats.total) * 100)}% retention</p>
+          <p class="text-xs text-green-500">{stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% retention</p>
         </div>
         <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
           <span class="text-green-600 text-lg">✅</span>
@@ -643,6 +734,37 @@
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
       <h2 class="text-lg font-semibold text-gray-900">Member Management</h2>
       <div class="flex flex-wrap gap-2">
+        <!-- NEW: Export to CSV Button with dropdown info -->
+        <div class="relative group">
+          <button
+            on:click={exportToCSV}
+            disabled={isProcessing || filteredMembers.length === 0}
+            class="bg-green-600 text-white px-4 py-2 text-sm rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors duration-200 font-medium inline-flex items-center"
+            title="Export filtered members to CSV"
+          >
+            <span class="mr-2">📊</span> Export CSV
+            {#if filteredMembers.length > 0}
+              <span class="ml-1 text-xs bg-green-700 px-1.5 py-0.5 rounded">
+                {filteredMembers.length}
+              </span>
+            {/if}
+          </button>
+          
+          <!-- Export info tooltip -->
+          {#if filteredMembers.length > 0}
+            <div class="absolute bottom-full left-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+              <div class="font-semibold mb-1">Export Details:</div>
+              <div class="space-y-1">
+                <div>• {exportInfo.description}</div>
+                <div>• {exportInfo.active} active, {exportInfo.expired} expired</div>
+                <div>• Includes: Name, Contact, Membership, Dates, Status</div>
+                <div>• Format: CSV (Excel compatible)</div>
+              </div>
+              <div class="w-2 h-2 bg-gray-900 rotate-45 absolute -bottom-1 left-4"></div>
+            </div>
+          {/if}
+        </div>
+
         <button
           on:click={cleanupOrphanedCashflowEntries}
           disabled={isProcessing}
@@ -680,6 +802,26 @@
         </select>
       </div>
     </div>
+
+    <!-- NEW: Export Summary Bar -->
+    {#if searchTerm || statusFilter !== 'All'}
+      <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-center justify-between text-sm">
+          <div class="flex items-center text-blue-700">
+            <span class="mr-2">📋</span>
+            <span>Showing {exportInfo.description}</span>
+          </div>
+          {#if filteredMembers.length > 0}
+            <button
+              on:click={exportToCSV}
+              class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+            >
+              <span class="mr-1">📊</span> Export this view
+            </button>
+          {/if}
+        </div>
+      </div>
+    {/if}
   </div>
 
   <!-- Add/Edit Member Form Modal -->
@@ -1008,17 +1150,39 @@
         </table>
       </div>
 
-      <!-- Summary Footer -->
+      <!-- Enhanced Summary Footer with Export -->
       <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div class="text-sm text-gray-600">
             Showing {filteredMembers.length} of {members.length} members
+            {#if filteredMembers.length !== members.length}
+              <button
+                on:click={exportToCSV}
+                disabled={filteredMembers.length === 0}
+                class="ml-2 text-green-600 hover:text-green-800 font-medium inline-flex items-center disabled:text-gray-400"
+                title="Export filtered results"
+              >
+                <span class="mr-1 text-xs">📊</span>
+                Export filtered
+              </button>
+            {/if}
           </div>
-          <div class="text-sm font-medium">
-            Active Members: 
-            <span class="text-green-600 font-bold">{stats.active}</span>
-            {#if stats.expiringSoon > 0}
-              • <span class="text-yellow-600 font-bold">{stats.expiringSoon}</span> expiring soon
+          <div class="flex items-center gap-4">
+            <div class="text-sm font-medium">
+              Active Members: 
+              <span class="text-green-600 font-bold">{stats.active}</span>
+              {#if stats.expiringSoon > 0}
+                • <span class="text-yellow-600 font-bold">{stats.expiringSoon}</span> expiring soon
+              {/if}
+            </div>
+            {#if filteredMembers.length > 0}
+              <button
+                on:click={exportToCSV}
+                class="text-sm bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors inline-flex items-center"
+              >
+                <span class="mr-1">📊</span>
+                CSV
+              </button>
             {/if}
           </div>
         </div>
@@ -1060,5 +1224,17 @@
     to {
       transform: rotate(360deg);
     }
+  }
+
+  /* Tooltip arrow */
+  .group:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .tooltip {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0.3s;
   }
 </style>
