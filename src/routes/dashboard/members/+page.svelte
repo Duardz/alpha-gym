@@ -31,8 +31,8 @@
 
   // Membership plans with pricing - Updated with new pricing
   const membershipPlans = [
-    { type: 'Day Pass' as MembershipType, duration: 1, unit: 'day', defaultPrice: 40 },
-    { type: 'Warrior Pass' as MembershipType, duration: 1, unit: 'month', defaultPrice: 799 },
+    { type: 'Day Pass' as MembershipType, duration: 1, unit: 'day', defaultPrice: 60 },
+    { type: 'Warrior Pass' as MembershipType, duration: 1, unit: 'month', defaultPrice: 650 },
     { type: 'Gladiator Pass' as MembershipType, duration: 1, unit: 'custom', defaultPrice: 2000 },
     { type: 'Alpha Elite Pass' as MembershipType, duration: 3, unit: 'months', defaultPrice: 4000 }
   ];
